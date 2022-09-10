@@ -135,9 +135,6 @@ func handleIsPrime(req Request) (*Response, error) {
 	// Only whole numbers can be prime
 	if req.Number == math.Trunc(req.Number) {
 		z := big.NewInt(int64(req.Number))
-		if z.Int64() == 0 {
-			return nil, fmt.Errorf("prime numbers are defined for integers greater than 1")
-		}
 		// n = 20 gives a false positive rate 0.000,000,000,001
 		resp.Prime = z.ProbablyPrime(20)
 	}
