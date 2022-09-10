@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 
 	proxyproto "github.com/pires/go-proxyproto"
 )
@@ -94,12 +93,11 @@ func (s *Server) handleConn(conn net.Conn) {
 
 	// Read through connection bytes
 	for {
-		// Add timeout to the connection to workaround binary.Read hanging forever on a closed connection
-		conn.SetDeadline(time.Now().Add(time.Second))
-
 		var p Packet
 		err := binary.Read(conn, binary.BigEndian, &p)
-		if err != nil && !errors.Is(err, io.EOF) {
+		if err != nil && errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
 			fmt.Println(err)
 			break
 		}
