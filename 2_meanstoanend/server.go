@@ -90,13 +90,13 @@ type Packet struct {
 func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
 
-	// Add timeout to the connection to workaround binary.Read hanging forever on a closed connection
-	conn.SetDeadline(time.Now().Add(time.Second))
-
 	log.Printf("2_meanstoanend at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
 	// Read through connection bytes
 	for {
+		// Add timeout to the connection to workaround binary.Read hanging forever on a closed connection
+		conn.SetDeadline(time.Now().Add(time.Second))
+
 		var p Packet
 		err := binary.Read(conn, binary.BigEndian, &p)
 		if err != nil && !errors.Is(err, io.EOF) {
