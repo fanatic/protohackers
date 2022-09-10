@@ -1,4 +1,4 @@
-package smoketest_test
+package tests
 
 import (
 	"context"

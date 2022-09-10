@@ -1,4 +1,4 @@
-package primetime_test
+package tests
 
 import (
 	"bufio"
@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLevel0Smoketest(t *testing.T) {
+func TestLevel1Primetime(t *testing.T) {
 	ctx := context.Background()
 	s, err := primetime.NewServer(ctx, "")
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestLevel0Smoketest(t *testing.T) {
 	})
 
 	t.Run("lots-of-inputs", func(t *testing.T) {
-		f, err := os.Open("inputs.txt")
+		f, err := os.Open("1_primetime_inputs.txt")
 		require.NoError(t, err)
 
 		conn, err := net.Dial("tcp", s.Addr)
