@@ -102,8 +102,8 @@ func handleConn(conn net.Conn) {
 }
 
 type Request struct {
-	Method string  `json:"method"`
-	Number float64 `json:"number"`
+	Method string   `json:"method"`
+	Number *float64 `json:"number"`
 }
 
 type Response struct {
@@ -128,18 +128,22 @@ func handleRequest(w io.Writer, req Request) error {
 }
 
 func handleIsPrime(req Request) (*Response, error) {
-	log.Printf("1_primetime at=handle-request.start method=%q number=%f\n", req.Method, req.Number)
+	if req.Number == nil {
+		return nil, fmt.Errorf("missing arg")
+	}
+
+	log.Printf("1_primetime at=handle-request.start method=%q number=%f\n", req.Method, *req.Number)
 
 	resp := Response{Method: req.Method, Prime: false}
 
 	// Only whole numbers can be prime
-	if req.Number == math.Trunc(req.Number) {
-		z := big.NewInt(int64(req.Number))
+	if *req.Number == math.Trunc(*req.Number) {
+		z := big.NewInt(int64(*req.Number))
 		// n = 20 gives a false positive rate 0.000,000,000,001
 		resp.Prime = z.ProbablyPrime(20)
 	}
 
-	log.Printf("1_primetime at=handle-request.finish method=%q number=%f prime=%t\n", req.Method, req.Number, resp.Prime)
+	log.Printf("1_primetime at=handle-request.finish method=%q number=%f prime=%t\n", req.Method, *req.Number, resp.Prime)
 	return &resp, nil
 }
 
