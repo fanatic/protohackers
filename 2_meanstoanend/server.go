@@ -133,19 +133,19 @@ func (s *Server) handleQuery(mintime, maxtime int32) int32 {
 	s.Lock()
 	defer s.Unlock()
 
-	count := 0
-	sum := int32(0)
+	count := float64(0)
+	sum := float64(0)
 	for _, t := range s.timestamps {
 		if mintime <= t && t <= maxtime {
 			count += 1
-			sum += s.values[t]
+			sum += float64(s.values[t])
 		}
 	}
-	log.Printf("2_meanstoanend at=handle-query mintime=%d maxtime=%d sum=%d count=%d\n", mintime, maxtime, sum, count)
+	log.Printf("2_meanstoanend at=handle-query mintime=%d maxtime=%d sum=%f count=%f\n", mintime, maxtime, sum, count)
 	if count == 0 {
 		return 0
 	}
-	return int32(float64(sum) / float64(count))
+	return int32(sum / count)
 }
 
 func sortedInsert(ss []int32, s int32) []int32 {
