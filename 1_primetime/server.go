@@ -129,7 +129,6 @@ func handleRequest(w io.Writer, req Request) error {
 
 func handleIsPrime(req Request) (*Response, error) {
 	log.Printf("1_primetime at=handle-request.start method=%q number=%f\n", req.Method, req.Number)
-	defer log.Printf("1_primetime at=handle-request.finish method=%q number=%f\n", req.Method, req.Number)
 
 	resp := Response{Method: req.Method, Prime: false}
 
@@ -143,6 +142,7 @@ func handleIsPrime(req Request) (*Response, error) {
 		resp.Prime = z.ProbablyPrime(20)
 	}
 
+	log.Printf("1_primetime at=handle-request.finish method=%q number=%f prime=%t\n", req.Method, req.Number, resp.Prime)
 	return &resp, nil
 }
 
@@ -150,5 +150,7 @@ func handleError(w io.Writer, e error) {
 	resp := ErrorResponse{
 		Error: e.Error(),
 	}
+	log.Printf("1_primetime at=handle-request.error error=%s\n", resp.Error)
+
 	_ = json.NewEncoder(w).Encode(&resp)
 }
