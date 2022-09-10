@@ -35,9 +35,6 @@ func TestLevel0Smoketest(t *testing.T) {
 		_, err = fmt.Fprintf(conn, `{"method":"isPrime","number":3}`+"\n")
 		require.NoError(t, err)
 
-		_, err = fmt.Fprintf(conn, `{"method":"isPrime","number":0}`+"\n")
-		require.NoError(t, err)
-
 		_, err = fmt.Fprintf(conn, `{`+"\n")
 		require.NoError(t, err)
 
@@ -61,7 +58,6 @@ func TestLevel0Smoketest(t *testing.T) {
 			`{"method":"isPrime","prime":false}`+"\n"+
 				`{"method":"isPrime","prime":false}`+"\n"+
 				`{"method":"isPrime","prime":true}`+"\n"+
-				`{"error":"prime numbers are defined for integers greater than 1"}`+"\n"+
 				`{"error":"unexpected end of JSON input"}`+"\n"+
 				`{"error":"json: cannot unmarshal string into Go struct field Request.number of type float64"}`+"\n"+
 				`{"error":"unsupported method"}`+"\n",
