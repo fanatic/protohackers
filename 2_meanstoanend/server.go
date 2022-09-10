@@ -18,7 +18,9 @@ type Server struct {
 	l      net.Listener
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+}
 
+type Session struct {
 	sync.Mutex
 	timestamps []int32
 	values     map[int32]int32
@@ -38,7 +40,7 @@ func NewServer(ctx context.Context, port string) (*Server, error) {
 	l = &proxyproto.Listener{Listener: l}
 
 	log.Printf("2_meanstoanend at=server.listening addr=%q\n", l.Addr().String())
-	s := &Server{Addr: l.Addr().String(), l: l, cancel: cancel, values: map[int32]int32{}}
+	s := &Server{Addr: l.Addr().String(), l: l, cancel: cancel}
 
 	go s.acceptLoop(ctx)
 
@@ -73,7 +75,7 @@ func (s *Server) acceptLoop(ctx context.Context) {
 			}
 			s.wg.Add(1)
 			go func() {
-				s.handleConn(conn)
+				handleConn(conn)
 				s.wg.Done()
 			}()
 		}
@@ -86,8 +88,10 @@ type Packet struct {
 	B int32
 }
 
-func (s *Server) handleConn(conn net.Conn) {
+func handleConn(conn net.Conn) {
 	defer conn.Close()
+
+	s := &Session{values: map[int32]int32{}}
 
 	log.Printf("2_meanstoanend at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
@@ -119,7 +123,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	log.Printf("2_meanstoanend at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 }
 
-func (s *Server) handleInsert(timestamp, price int32) {
+func (s *Session) handleInsert(timestamp, price int32) {
 	log.Printf("2_meanstoanend at=handle-insert timestamp=%d price=%d\n", timestamp, price)
 
 	s.Lock()
@@ -129,7 +133,7 @@ func (s *Server) handleInsert(timestamp, price int32) {
 	s.values[timestamp] = price
 }
 
-func (s *Server) handleQuery(mintime, maxtime int32) int32 {
+func (s *Session) handleQuery(mintime, maxtime int32) int32 {
 	s.Lock()
 	defer s.Unlock()
 
