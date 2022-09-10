@@ -117,15 +117,17 @@ type ErrorResponse struct {
 
 func handleRequest(w io.Writer, req Request) error {
 	if req.Method == "isPrime" {
-		resp := handleIsPrime(req)
+		resp, err := handleIsPrime(req)
+		if err != nil {
+			return err
+		}
 		return json.NewEncoder(w).Encode(&resp)
-	} else {
-		handleError(w, fmt.Errorf("unsupported method"))
 	}
-	return nil
+
+	return fmt.Errorf("unsupported method")
 }
 
-func handleIsPrime(req Request) Response {
+func handleIsPrime(req Request) (*Response, error) {
 	log.Printf("1_primetime at=handle-request.start method=%q number=%f\n", req.Method, req.Number)
 	defer log.Printf("1_primetime at=handle-request.finish method=%q number=%f\n", req.Method, req.Number)
 
@@ -134,11 +136,14 @@ func handleIsPrime(req Request) Response {
 	// Only whole numbers can be prime
 	if req.Number == math.Trunc(req.Number) {
 		z := big.NewInt(int64(req.Number))
+		if z.Int64() == 0 {
+			return nil, fmt.Errorf("prime numbers are defined for integers greater than 1")
+		}
 		// n = 20 gives a false positive rate 0.000,000,000,001
 		resp.Prime = z.ProbablyPrime(20)
 	}
 
-	return resp
+	return &resp, nil
 }
 
 func handleError(w io.Writer, e error) {
