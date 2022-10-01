@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -102,7 +101,7 @@ func handleConn(conn net.Conn) {
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
-			fmt.Println(err)
+			log.Printf("2_meanstoanend at=handle-connection.read remote-addr=%q err=%q\n", conn.RemoteAddr(), err.Error())
 			break
 		}
 
@@ -113,7 +112,7 @@ func handleConn(conn net.Conn) {
 			mean := s.handleQuery(p.A, p.B)
 			err := binary.Write(conn, binary.BigEndian, &mean)
 			if err != nil && !errors.Is(err, io.EOF) {
-				fmt.Println(err)
+				log.Printf("2_meanstoanend at=handle-connection.write remote-addr=%q err=%q\n", conn.RemoteAddr(), err.Error())
 				break
 			}
 		default:

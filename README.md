@@ -17,3 +17,7 @@ Package `primetime` implements a JSON request/response service that responds to 
 ## Level 2: Means to an End
 
 Package `meanstoanend` implements a TCP storage service for prices, returning means.
+
+## Level 3: Budget Chat
+
+Package `budgetchat` implements a TCP chat room protocol.
