@@ -32,7 +32,7 @@ Package `mobinthemiddle` implements a line-altering proxy server
 
 ## Level 6: Speed Daemon
 
-Package `speeddaemon` implements
+Package `speeddaemon` implements a speed limit enforcement server
 
 ## Level 7: Line Reversal
 
