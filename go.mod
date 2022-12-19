@@ -3,6 +3,7 @@ module github.com/fanatic/protohackers
 go 1.19
 
 require (
+	github.com/dlclark/regexp2 v1.7.0
 	github.com/pires/go-proxyproto v0.6.2
 	github.com/stretchr/testify v1.8.0
 )

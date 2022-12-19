@@ -28,7 +28,7 @@ Package `database` implements a UDP key-value store.
 
 ## Level 5: Mob in the Middle
 
-Package `mobinthemiddle` implements
+Package `mobinthemiddle` implements a line-altering proxy server
 
 ## Level 6: Speed Daemon
 
