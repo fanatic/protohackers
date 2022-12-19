@@ -82,7 +82,7 @@ func (s *Server) acceptLoop(ctx context.Context) {
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 
-	log.Printf("1_primetime at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
+	//log.Printf("1_primetime at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
 	// Read through connection bytes line-by-line
 	sc := bufio.NewScanner(conn)
@@ -98,7 +98,7 @@ func handleConn(conn net.Conn) {
 		}
 	}
 
-	log.Printf("1_primetime at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
+	//log.Printf("1_primetime at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 }
 
 type Request struct {

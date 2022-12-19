@@ -92,7 +92,7 @@ func handleConn(conn net.Conn) {
 
 	s := &Session{values: map[int32]int32{}}
 
-	log.Printf("2_meanstoanend at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
+	//log.Printf("2_meanstoanend at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
 	// Read through connection bytes
 	for {
@@ -119,7 +119,7 @@ func handleConn(conn net.Conn) {
 		}
 	}
 
-	log.Printf("2_meanstoanend at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
+	//log.Printf("2_meanstoanend at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 }
 
 func (s *Session) handleInsert(timestamp, price int32) {

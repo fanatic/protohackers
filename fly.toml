@@ -85,3 +85,86 @@ processes = []
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
+
+[[services]]
+  internal_port = 10004
+  protocol = "udp"
+
+  [[services.ports]]
+    port = 10004
+
+[[services]]
+  internal_port = 10005
+  protocol = "tcp"
+  handlers = ["proxy_proto"]
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    port = 10005
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
+
+[[services]]
+  internal_port = 10006
+  protocol = "tcp"
+  handlers = ["proxy_proto"]
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    port = 10006
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
+
+[[services]]
+  internal_port = 10007
+  protocol = "tcp"
+  handlers = ["proxy_proto"]
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    port = 10007
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
+
+[[services]]
+  internal_port = 10008
+  protocol = "tcp"
+  handlers = ["proxy_proto"]
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    port = 10008
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"

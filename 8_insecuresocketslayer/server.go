@@ -1,9 +1,8 @@
-package smoketest
+package insecuresocketslayer
 
 import (
 	"context"
 	"errors"
-	"io"
 	"log"
 	"net"
 	"sync"
@@ -31,7 +30,7 @@ func NewServer(ctx context.Context, port string) (*Server, error) {
 	// Wrap listener in a proxyproto listener
 	l = &proxyproto.Listener{Listener: l}
 
-	log.Printf("0_smoketest at=server.listening addr=%q\n", l.Addr().String())
+	log.Printf("8_insecuresocketslayer at=server.listening addr=%q\n", l.Addr().String())
 	s := &Server{Addr: l.Addr().String(), l: l, cancel: cancel}
 
 	go s.acceptLoop(ctx)
@@ -62,27 +61,21 @@ func (s *Server) acceptLoop(ctx context.Context) {
 				return
 			}
 			if err != nil {
-				log.Printf("0_smoketest at=accept err=%q\n", err)
+				log.Printf("8_insecuresocketslayer at=accept err=%q\n", err)
 				continue
 			}
 			s.wg.Add(1)
 			go func() {
-				handleConn(conn)
+				s.handleConn(conn)
 				s.wg.Done()
 			}()
 		}
 	}
 }
 
-func handleConn(conn net.Conn) {
+func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
+	//log.Printf("8_insecuresocketslayer at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
-	//log.Printf("0_smoketest at=handle-connection remote-addr=%q\n", conn.RemoteAddr())
-	_, err := io.Copy(conn, conn)
-	if err == io.EOF {
-		return
-	} else if err != nil {
-		log.Printf("0_smoketest at=handle-connection err=%q\n", err)
-	}
-	//log.Printf("0_smoketest at=handle-connection bytes=%d\n", n)
+	//log.Printf("8_insecuresocketslayer at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 }

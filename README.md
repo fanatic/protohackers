@@ -21,3 +21,23 @@ Package `meanstoanend` implements a TCP storage service for prices, returning me
 ## Level 3: Budget Chat
 
 Package `budgetchat` implements a TCP chat room protocol.
+
+## Level 4: Unusual Database Program
+
+Package `database` implements a UDP key-value store.
+
+## Level 5: Mob in the Middle
+
+Package `mobinthemiddle` implements
+
+## Level 6: Speed Daemon
+
+Package `speeddaemon` implements
+
+## Level 7: Line Reversal
+
+Package `linereversal` implements
+
+## Level 8: Insecure Sockets Layer
+
+Package `insecuresocketslayer` implements

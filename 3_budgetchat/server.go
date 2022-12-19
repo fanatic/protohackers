@@ -78,7 +78,7 @@ func (s *Server) acceptLoop(ctx context.Context) {
 
 func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
-	log.Printf("3_budgetchat at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
+	//log.Printf("3_budgetchat at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
 	sess, err := NewSession(conn)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 
 	sess.Close()
-	log.Printf("3_budgetchat at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
+	//log.Printf("3_budgetchat at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 }
 
 func isAlphaNumeric(word string) bool {
