@@ -7,17 +7,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	budgetchat "github.com/fanatic/protohackers/7_linereversal"
+	linereversal "github.com/fanatic/protohackers/7_linereversal"
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "10007"
+	addr := os.Getenv("ADDR")
+	if addr == "" {
+		addr = "fly-global-services:10007"
 	}
 	ctx := context.Background()
 
-	s, err := budgetchat.NewServer(ctx, port)
+	s, err := linereversal.NewServer(ctx, addr)
 	if err != nil {
 		log.Fatalf("7_linereversal at=server err=%q\n", err)
 	}
