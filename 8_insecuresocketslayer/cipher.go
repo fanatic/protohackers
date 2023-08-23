@@ -48,21 +48,26 @@ func (crw *CipherReaderWriter) Write(p []byte) (n int, err error) {
 
 func Decode(cipherSpec []byte, msg []byte, pos int, reverse bool) {
 	//fmt.Printf("Decode(%x (%q), %d, %t)\n", msg, msg, pos, reverse)
-	// Apply each operation in the cipher spec to the message
-	for i := len(cipherSpec) - 1; i >= 0; i-- {
-		applyCipher(cipherSpec, msg, pos, false, i)
+
+	reversedCipherSpecs := make([]byte, len(cipherSpec))
+	for i := 0; i < len(cipherSpec); i++ {
 		if cipherSpec[i] == 0x02 || cipherSpec[i] == 0x04 {
-			i-- // skip operand
+			reversedCipherSpecs[len(cipherSpec)-i-2] = cipherSpec[i]
+			reversedCipherSpecs[len(cipherSpec)-i-1] = cipherSpec[i+1]
+			i++ // skip operand
+		} else {
+			reversedCipherSpecs[len(cipherSpec)-i-1] = cipherSpec[i]
 		}
 	}
-	//fmt.Printf("-> %x (%q)\n", msg, msg)
+
+	Encode(reversedCipherSpecs, msg, pos, reverse)
 }
 
 func Encode(cipherSpec []byte, msg []byte, pos int, reverse bool) {
 	//fmt.Printf("Encode(%x (%q), %d, %t)\n", msg, msg, pos, reverse)
 	// Apply each operation in the cipher spec to the message
 	for i := 0; i < len(cipherSpec); i++ {
-		applyCipher(cipherSpec, msg, pos, true, i)
+		applyCipher(cipherSpec, msg, pos, reverse, i)
 		if cipherSpec[i] == 0x02 || cipherSpec[i] == 0x04 {
 			i++ // skip operand
 		}

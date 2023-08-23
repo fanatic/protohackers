@@ -101,4 +101,14 @@ func TestCipherSpecs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "5x car\n3x rat\n", string(out))
 	})
+
+	t.Run("reproducer 0simple", func(t *testing.T) {
+		b := bytes.NewBuffer([]byte{0x30, 0x31, 0x79, 0x21, 0x75, 0x6e, 0x78, 0x21, 0x62, 0x60, 0x73, 0x0b})
+		crw := NewCipherReaderWriter(b, []byte{0x02, 0x01})
+		require.NoError(t, crw.Validate())
+		out, err := io.ReadAll(crw)
+		require.NoError(t, err)
+		assert.Equal(t, "10x toy car\n", string(out))
+
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -76,12 +77,15 @@ func (s *Server) acceptLoop(ctx context.Context) {
 }
 
 func (s *Server) handleConn(conn net.Conn) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
 	defer conn.Close()
-	log.Printf("8_insecuresocketslayer at=handle-connection.start remote-addr=%q\n", conn.RemoteAddr())
 
 	cipherSpec, err := s.handleCipherSpec(conn)
 	if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
-		log.Printf("8_insecuresocketslayer at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 		return
 	} else if err != nil {
 		log.Printf("8_insecuresocketslayer at=handle-connection.err err=%s\n", err)
@@ -106,12 +110,10 @@ func (s *Server) handleConn(conn net.Conn) {
 		return
 	}
 
-	log.Printf("8_insecuresocketslayer at=handle-connection.finish remote-addr=%q\n", conn.RemoteAddr())
 }
 
 // The cipher spec is represented as a series of operations, with the operation types encoded by a single byte (and for 02 and 04, another byte encodes the operand), ending with a 00 byte, as follows:
 func (s *Server) handleCipherSpec(conn net.Conn) ([]byte, error) {
-	log.Printf("8_insecuresocketslayer at=handle-cipher-spec.start remote-addr=%q\n", conn.RemoteAddr())
 
 	// Read the cipher spec ending with a 00 byte
 	var cipherSpec []byte
@@ -121,7 +123,7 @@ func (s *Server) handleCipherSpec(conn net.Conn) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if b[0] == 0 {
+		if b[0] == 0 && (len(cipherSpec) == 0 || cipherSpec[len(cipherSpec)-1] != 0x02 || cipherSpec[len(cipherSpec)-1] != 0x04) {
 			break
 		}
 		cipherSpec = append(cipherSpec, b[0])
@@ -137,9 +139,9 @@ func (s *Server) handleApplication(conn io.ReadWriter, cipherSpec []byte) error 
 	for scanner.Scan() {
 		msg := scanner.Text()
 
-		log.Printf("<-- %s\n", string(msg))
+		log.Printf("<-- %q\n", string(msg))
 		reply := []byte(findMaxToy(msg))
-		log.Printf("--> %s\n", string(reply))
+		log.Printf("--> %q\n", string(reply))
 
 		// Send the message back to the client
 		_, err := conn.Write(append(reply, "\n"...))
