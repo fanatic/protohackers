@@ -165,9 +165,9 @@ func (s *Server) handleConnect(session int, remote net.Addr) {
 
 func (s *Server) handleData(session, pos int, data []byte, remote net.Addr) {
 	s.SessionLock.Lock()
-	defer s.SessionLock.Unlock()
-
 	sess, exists := s.Sessions[session]
+	s.SessionLock.Unlock()
+
 	if !exists {
 		// If the session is not open: send /close/SESSION/ and stop.
 		log.Printf("7_linereversal at=data.err session-missing\n")
@@ -184,8 +184,8 @@ func (s *Server) handleData(session, pos int, data []byte, remote net.Addr) {
 	data = bytes.ReplaceAll(data, []byte{'\\', '/'}, []byte{'/'})   // unescape forward slash \/ -> /
 	data = bytes.ReplaceAll(data, []byte{'\\', '\\'}, []byte{'\\'}) // unescape back slash \\ -> \
 
-	sess.Lock()
-	defer sess.Unlock()
+	sess.InLock.Lock()
+	defer sess.InLock.Unlock()
 
 	lengthReceived := len(sess.buffer)
 
@@ -196,7 +196,11 @@ func (s *Server) handleData(session, pos int, data []byte, remote net.Addr) {
 	}
 
 	// Insert length elements at position
-	sess.buffer = append(sess.buffer[:pos], data...)
+	newBuffer := append(sess.buffer[:pos], data...)
+	if lengthReceived > pos+len(data) {
+		newBuffer = append(newBuffer, sess.buffer[pos+len(data):]...)
+	}
+	sess.buffer = newBuffer
 
 	log.Printf("Pos: %d, old buffer: %d, new buffer: %d\n", pos, lengthReceived, len(sess.buffer))
 	log.Printf("B: %q\n", sess.buffer)
@@ -225,8 +229,8 @@ func (s *Server) handleAck(session, length int, remote net.Addr) {
 		return
 	}
 
-	sess.Lock()
-	defer sess.Unlock()
+	sess.OutLock.Lock()
+	defer sess.OutLock.Unlock()
 	if length < sess.LargestAckLength {
 		// do nothing and stop (assume it's a duplicate ack that got delayed).
 		log.Printf("7_linereversal dropping duplicate ack %d < %d\n", length, sess.LargestAckLength)
@@ -241,9 +245,9 @@ func (s *Server) handleAck(session, length int, remote net.Addr) {
 		log.Printf("7_linereversal retransmitting %d < %d\n", length, len(sess.OutBuffer))
 
 		sess.LargestAckLength = length
-		sess.Unlock()
+		sess.OutLock.Unlock()
 		sess.resendBuffer()
-		sess.Lock()
+		sess.OutLock.Lock()
 	} else {
 		if sess.LargestAckLength < length {
 			sess.LargestAckLength = length
