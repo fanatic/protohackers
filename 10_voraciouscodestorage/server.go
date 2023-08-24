@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sort"
@@ -81,14 +82,12 @@ func (s *Server) acceptLoop(ctx context.Context) {
 }
 
 func (s *Server) handleConn(conn net.Conn) {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println(r)
-		}
-	}()
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		fmt.Println(r)
+	// 	}
+	// }()
 	defer conn.Close()
-
-	log.Printf("10_voraciouscodestorage at=start addr=%q\n", conn.RemoteAddr().String())
 
 	fmt.Fprintf(conn, "READY\n")
 
@@ -96,22 +95,27 @@ func (s *Server) handleConn(conn net.Conn) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		fields := strings.Fields(line)
-		log.Printf("10_voraciouscodestorage at=input line=%q\n", line)
+		log.Printf("<-- %s\n", line)
 
 		// All commands must have at least one field, otherwise close connection
 		if len(fields) == 0 {
-			fmt.Fprintf(conn, "ERR illegal method:\n")
+			replyf(conn, "ERR illegal method:")
 			return
 		}
 
 		switch strings.ToUpper(fields[0]) {
 		case "HELP":
-			fmt.Fprintf(conn, "OK usage: HELP|GET|PUT|LIST\n")
-			fmt.Fprintf(conn, "READY\n")
+			replyf(conn, "OK usage: HELP|GET|PUT|LIST")
+			replyf(conn, "READY")
 		case "LIST":
+			if len(fields) != 2 {
+				replyf(conn, "ERR usage: LIST dir")
+				continue
+			}
+
 			// if operand is not ascii, return error
 			if !isASCII(fields[1]) || fields[1][0] != '/' {
-				fmt.Fprintf(conn, "ERR illegal dir name\n")
+				replyf(conn, "ERR illegal dir name")
 				continue
 			}
 			s.storageMutex.RLock()
@@ -119,38 +123,62 @@ func (s *Server) handleConn(conn net.Conn) {
 			s.storageMutex.RUnlock()
 
 			sort.Strings(files)
-			fmt.Fprintf(conn, "OK %d\n", len(files))
+			replyf(conn, "OK %d", len(files))
 			for _, f := range files {
-				fmt.Fprintf(conn, "%s\n", f)
+				replyf(conn, "%s", f)
 			}
-			fmt.Fprintf(conn, "READY\n")
+			replyf(conn, "READY")
 		case "PUT":
 			if len(fields) != 3 {
-				fmt.Fprintf(conn, "ERR usage: PUT file length newline data\n")
+				replyf(conn, "ERR usage: PUT file length newline data")
 				continue
 			}
 			if !isASCII(fields[1]) || fields[1][0] != '/' {
-				fmt.Fprintf(conn, "ERR illegal file name\n")
+				replyf(conn, "ERR illegal file name")
 				continue
 			}
 			length, err := strconv.Atoi(fields[2])
 			if err != nil {
-				fmt.Fprintf(conn, "ERR illegal file length\n")
+				replyf(conn, "ERR illegal file length")
 				continue
 			}
 			if length < 0 {
-				fmt.Fprintf(conn, "ERR illegal file length\n")
+				replyf(conn, "ERR illegal file length")
 				continue
 			}
 
 			// Read file data
 			data := make([]byte, length)
-			fmt.Printf("Reading %d bytes\n", len(data))
+			log.Printf("--- Reading %d bytes\n", len(data))
 			n, err := scanner.ReadFull(data)
 			if err != nil || n != length {
-				fmt.Printf("err=%s n=%d\n", err, n)
-				fmt.Fprintf(conn, "ERR reading file data\n")
+				fmt.Printf("Read %d bytes.  err=%s\n", n, err)
+				replyf(conn, "ERR reading file data")
 				continue
+			}
+			log.Printf("--- Read %d bytes\n", len(data))
+
+			// check for content containing non-text character
+			if !isText(string(data)) {
+				fmt.Printf("Illegal file content: %q\n", string(data))
+				replyf(conn, "ERR illegal file content")
+				continue
+			}
+
+			// If latest revision matches, no need to store
+			s.storageMutex.RLock()
+			revisions, ok := s.storage[fields[1]]
+			s.storageMutex.RUnlock()
+
+			if ok && len(revisions) > 0 {
+				log.Printf("--- Comparing %d (incoming) with %d (latest)\n", len(data), len(revisions[len(revisions)-1]))
+				//log.Printf("--- %q\n", string(data))
+				//log.Printf("--- %q\n", string(revisions[len(revisions)-1]))
+				if string(revisions[len(revisions)-1]) == string(data) {
+					replyf(conn, "OK r%d", len(revisions))
+					replyf(conn, "READY")
+					continue
+				}
 			}
 
 			// Store file data
@@ -159,30 +187,30 @@ func (s *Server) handleConn(conn net.Conn) {
 			revision := len(s.storage[fields[1]])
 			s.storageMutex.Unlock()
 
-			fmt.Fprintf(conn, "OK r%d\n", revision)
-			fmt.Fprintf(conn, "READY\n")
+			replyf(conn, "OK r%d", revision)
+			replyf(conn, "READY")
 
 		case "GET":
-			if len(fields) != 2 {
-				fmt.Fprintf(conn, "ERR usage: GET file [revision]\n")
+			if len(fields) < 2 || len(fields) > 3 {
+				replyf(conn, "ERR usage: GET file [revision]")
 				continue
 			}
 
 			// if operand is not ascii, return error
 			if !isASCII(fields[1]) || fields[1][0] != '/' {
-				fmt.Fprintf(conn, "ERR illegal file name\n")
+				replyf(conn, "ERR illegal file name")
 				continue
 			}
 
 			var revision int
 			if len(fields) == 3 {
-				r, err := strconv.Atoi(fields[2])
+				r, err := strconv.Atoi(strings.TrimPrefix(fields[2], "r"))
 				if err != nil {
-					fmt.Fprintf(conn, "ERR illegal revision\n")
+					replyf(conn, "ERR illegal revision")
 					continue
 				}
-				if r < 0 {
-					fmt.Fprintf(conn, "ERR illegal revision\n")
+				if r <= 0 {
+					replyf(conn, "ERR illegal revision")
 					continue
 				}
 				revision = r
@@ -195,14 +223,14 @@ func (s *Server) handleConn(conn net.Conn) {
 			s.storageMutex.RUnlock()
 
 			if !ok {
-				fmt.Fprintf(conn, "ERR file does not exist\n")
+				replyf(conn, "ERR file does not exist")
 				continue
 			}
 
 			// if revision is specified, return that revision
 			if len(fields) == 3 {
 				if revision > len(revisions) {
-					fmt.Fprintf(conn, "ERR revision does not exist\n")
+					replyf(conn, "ERR revision does not exist")
 					continue
 				}
 			} else {
@@ -211,25 +239,39 @@ func (s *Server) handleConn(conn net.Conn) {
 			}
 
 			data := revisions[revision-1]
-			fmt.Fprintf(conn, "OK %d\n", len(data))
+			replyf(conn, "OK %d", len(data))
 			fmt.Fprintf(conn, "%s", data)
-			fmt.Fprintf(conn, "READY\n")
+			replyf(conn, "READY")
 
 		default:
-			fmt.Fprintf(conn, "ERR illegal method: %s\n", fields[0])
+			replyf(conn, "ERR illegal method: %s", fields[0])
 			return
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		log.Printf("10_voraciouscodestorage at=handleConn err=%q\n", err)
 	}
-
-	log.Printf("10_voraciouscodestorage at=finish addr=%q\n", conn.RemoteAddr().String())
 }
+
+func replyf(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprintf(w, format+"\n", args...)
+	log.Printf("--> %s\n", fmt.Sprintf(format, args...))
+}
+
+const validRunes = "/,-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 func isASCII(s string) bool {
 	for _, r := range s {
-		if r > 127 {
+		if !strings.ContainsRune(validRunes, r) {
+			return false
+		}
+	}
+	return true
+}
+
+func isText(s string) bool {
+	for _, r := range s {
+		if (r < 0x20 || r > 0x7e) && r != '\n' && r != '\r' && r != '\t' {
 			return false
 		}
 	}

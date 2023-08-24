@@ -3,7 +3,6 @@ package tests
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"net"
 	"testing"
 
@@ -64,6 +63,14 @@ func TestLevel10VoraciousCodeStorage(t *testing.T) {
 
 		scanner.Scan()
 		require.Equal(t, "READY", scanner.Text())
+
+		t.Run("empty field", func(t *testing.T) {
+			_, err = conn.Write([]byte("list\n"))
+			require.NoError(t, err)
+
+			scanner.Scan()
+			assert.Equal(t, "ERR usage: LIST dir", scanner.Text())
+		})
 
 		t.Run("bad dir name", func(t *testing.T) {
 			_, err = conn.Write([]byte("list a\n"))
@@ -136,29 +143,61 @@ func TestLevel10VoraciousCodeStorage(t *testing.T) {
 		scanner.Scan()
 		require.Equal(t, "READY", scanner.Text())
 
-		_, err = conn.Write([]byte("put a\n"))
-		require.NoError(t, err)
+		t.Run("put usage", func(t *testing.T) {
+			_, err = conn.Write([]byte("put a\n"))
+			require.NoError(t, err)
 
-		scanner.Scan()
-		assert.Equal(t, "ERR usage: PUT file length newline data", scanner.Text())
+			scanner.Scan()
+			assert.Equal(t, "ERR usage: PUT file length newline data", scanner.Text())
+		})
 
-		_, err = conn.Write([]byte("put /c 0\n"))
-		require.NoError(t, err)
+		t.Run("put empty file", func(t *testing.T) {
+			_, err = conn.Write([]byte("put /c 0\n"))
+			require.NoError(t, err)
 
-		scanner.Scan()
-		assert.Equal(t, "OK r1", scanner.Text())
-		scanner.Scan()
-		require.Equal(t, "READY", scanner.Text())
+			scanner.Scan()
+			assert.Equal(t, "OK r1", scanner.Text())
+			scanner.Scan()
+			require.Equal(t, "READY", scanner.Text())
+		})
 
-		_, err = conn.Write([]byte("put /c 1\n"))
-		require.NoError(t, err)
-		_, err = conn.Write([]byte("2"))
-		require.NoError(t, err)
+		t.Run("put file", func(t *testing.T) {
+			_, err = conn.Write([]byte("put /c 5\n"))
+			require.NoError(t, err)
+			_, err = conn.Write([]byte("12345"))
+			require.NoError(t, err)
 
-		scanner.Scan()
-		assert.Equal(t, "OK r2", scanner.Text())
-		scanner.Scan()
-		require.Equal(t, "READY", scanner.Text())
+			scanner.Scan()
+			assert.Equal(t, "OK r2", scanner.Text())
+			scanner.Scan()
+			require.Equal(t, "READY", scanner.Text())
+		})
+
+		t.Run("writing same data doesn't change revision", func(t *testing.T) {
+			_, err = conn.Write([]byte("put /c 5\n"))
+			require.NoError(t, err)
+			_, err = conn.Write([]byte("12345"))
+			require.NoError(t, err)
+
+			scanner.Scan()
+			assert.Equal(t, "OK r2", scanner.Text())
+			scanner.Scan()
+			require.Equal(t, "READY", scanner.Text())
+		})
+
+		t.Run("put big file", func(t *testing.T) {
+			_, err = conn.Write([]byte("put /c 50000\n"))
+			require.NoError(t, err)
+			for i := 0; i < 50000; i++ {
+				_, err = conn.Write([]byte("a"))
+				require.NoError(t, err)
+			}
+
+			scanner.Scan()
+			assert.Equal(t, "OK r3", scanner.Text())
+			scanner.Scan()
+			require.Equal(t, "READY", scanner.Text())
+		})
 	})
 
 	t.Run("get", func(t *testing.T) {
@@ -179,23 +218,66 @@ func TestLevel10VoraciousCodeStorage(t *testing.T) {
 		scanner.Scan()
 		assert.Equal(t, "READY", scanner.Text())
 
-		_, err = conn.Write([]byte("get\n"))
-		require.NoError(t, err)
+		t.Run("get usage", func(t *testing.T) {
 
-		fmt.Printf("Here\n")
-		scanner.Scan()
-		assert.Equal(t, "ERR usage: GET file [revision]", scanner.Text())
-		scanner.Scan()
-		assert.Equal(t, "READY", scanner.Text())
-		fmt.Printf("Here\n")
+			_, err = conn.Write([]byte("get\n"))
+			require.NoError(t, err)
 
-		_, err = conn.Write([]byte("get /d\n"))
-		require.NoError(t, err)
+			scanner.Scan()
+			assert.Equal(t, "ERR usage: GET file [revision]", scanner.Text())
+		})
 
-		scanner.Scan()
-		assert.Equal(t, "OK 1", scanner.Text())
+		t.Run("get file", func(t *testing.T) {
+			_, err = conn.Write([]byte("get /d\n"))
+			require.NoError(t, err)
 
-		scanner.Scan()
-		assert.Equal(t, "1READY", scanner.Text())
+			scanner.Scan()
+			assert.Equal(t, "OK 1", scanner.Text())
+
+			scanner.Scan()
+			assert.Equal(t, "1READY", scanner.Text())
+		})
+
+		t.Run("get file with revision", func(t *testing.T) {
+			_, err = conn.Write([]byte("get /d r1\n"))
+			require.NoError(t, err)
+
+			scanner.Scan()
+			assert.Equal(t, "OK 1", scanner.Text())
+
+			scanner.Scan()
+			assert.Equal(t, "1READY", scanner.Text())
+		})
+
+		t.Run("get file with bad revision", func(t *testing.T) {
+			_, err = conn.Write([]byte("get /d r0\n"))
+			require.NoError(t, err)
+
+			scanner.Scan()
+			assert.Equal(t, "ERR illegal revision", scanner.Text())
+		})
 	})
+
+	// t.Run("crashy cases", func(t *testing.T) {
+	// 	conn, err := net.Dial("tcp", s.Addr)
+	// 	require.NoError(t, err)
+	// 	defer conn.Close()
+
+	// 	scanner := bufio.NewScanner(conn)
+
+	// 	scanner.Scan()
+	// 	require.Equal(t, "READY", scanner.Text())
+
+	// 	t.Run("", func(t *testing.T) {
+	// 		_, err = conn.Write([]byte("GET /test.txt r0\n"))
+	// 		require.NoError(t, err)
+
+	// 		scanner.Scan()
+	// 		assert.Equal(t, "OK 1", scanner.Text())
+
+	// 		scanner.Scan()
+	// 		assert.Equal(t, "1READY", scanner.Text())
+	// 	})
+
+	// })
 }

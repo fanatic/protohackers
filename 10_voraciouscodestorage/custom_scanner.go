@@ -258,11 +258,15 @@ func (s *Scanner) ReadFull(data []byte) (int, error) {
 		return len(data), nil
 	}
 
+	//fmt.Printf("buffer didn't contain enough data (%d < %d)\n", s.end-s.start, len(data))
+
 	// if buffer contains some data, copy it and read the rest
+	originalLength := len(data)
 	n := s.end - s.start
 	copy(data, s.buf[s.start:s.end])
-	data = data[s.end-s.start:]
 	s.start = s.end
+
+	//fmt.Printf("buffer contributed %q\n", data[:n])
 
 	// when buffer is empty, read directly from the connection
 	if s.err != nil {
@@ -270,5 +274,11 @@ func (s *Scanner) ReadFull(data []byte) (int, error) {
 	}
 
 	// read the rest of the data
-	return io.ReadFull(s.r, data[n:])
+	buf := make([]byte, originalLength-n)
+	m, err := io.ReadFull(s.r, buf)
+	if err != nil {
+		return 0, err
+	}
+	copy(data[n:], buf[:m])
+	return originalLength, nil
 }
