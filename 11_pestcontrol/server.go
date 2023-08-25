@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -81,5 +82,31 @@ func (s *Server) handleConn(conn net.Conn) {
 		}
 	}()
 	defer conn.Close()
+
+	// Send hello
+	if err := WriteHello(conn); err != nil {
+		log.Printf("11_pestcontrol at=sendHello err=%q\n", err)
+		return
+	}
+
+	// Read hello
+	err := HandleHello(conn)
+	if err != nil && errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
+		return
+	} else if err != nil {
+		log.Printf("11_pestcontrol at=readHello err=%q\n", err)
+		WriteError(conn, err)
+		return
+	}
+
+	for {
+		err := HandleSiteVisit(conn)
+		if err != nil && errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
+			return
+		} else if err != nil {
+			WriteError(conn, fmt.Errorf("reading site visit: %w", err))
+			continue
+		}
+	}
 
 }
